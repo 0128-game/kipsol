@@ -2,13 +2,13 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>独自言語メモ帳 v6</title>
+    <title>キプソル語メモ帳 v7</title>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 95%; max-width: 1000px; }
-        textarea { width: 100%; height: 80px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 18px; margin-bottom: 20px; resize: vertical; outline: none; }
+        textarea { width: 100%; height: 120px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 18px; margin-bottom: 20px; resize: vertical; outline: none; }
         textarea:focus { border-color: #007bff; }
-        #canvas-container { width: 100%; overflow-x: auto; background: #fff; border: 1px solid #ccc; border-radius: 8px; }
+        #canvas-container { width: 100%; overflow-x: auto; background: #fff; border: 1px solid #ccc; border-radius: 8px; min-height: 400px; }
         canvas { display: block; }
         .info { font-size: 0.85rem; color: #555; line-height: 1.6; background: #e9ecef; padding: 15px; border-radius: 8px; margin-top: 20px; }
     </style>
@@ -16,18 +16,18 @@
 <body>
 
 <div class="container">
-    <h2>記号言語メモ帳 (n の修正完了)</h2>
-    <textarea id="input" placeholder="入力例: nani, lulo, kana."></textarea>
+    <h2>キプソル語メモ帳 </h2>
+    <textarea id="input" placeholder="lol,doduk,sulso,sos,su,sukusol,."></textarea>
     
     <div id="canvas-container">
         <canvas id="canvas"></canvas>
     </div>
 
     <div class="info">
-        <strong>【現在の文字仕様】</strong><br>
-        ・<strong>n</strong>：二重円 ＋ 3等分線（30度傾斜）<br>
-        ・<strong>l</strong>：二重円のみ<br>
-        ・<strong>サイズ</strong>：1.5倍（有声音・n の線は外円まで到達）
+        <strong>【操作ガイド】</strong><br>
+        ・<strong>改行</strong>：テキストエリアでEnterを押すと、次の行に描画されます。<br>
+        ・<strong>高さ自動調整</strong>：行数が増えるとキャンバスが下方向に伸びます。<br>
+        ・<strong>文末記号</strong>：ピリオド(.)を入力すると、その行の基準高さにリセットされます。
     </div>
 </div>
 
@@ -41,6 +41,7 @@
     const R_SMALL = 10 * SCALE;
     const R_DOT = 3 * SCALE;
     const BASE_LINE_DIST = 45 * SCALE;
+    const LINE_HEIGHT = 120 * SCALE; // 行間の高さ
 
     const CHAR_MAP = {
         'z': { r: R_BIG,   lines: 0, type: 'big'   , offset: 0 },
@@ -62,27 +63,22 @@
         ctx.lineWidth = 2.5;
         ctx.strokeStyle = '#333';
         
-        // 外側の円を描画 (big または double)
         if (config.type === 'big' || config.type === 'double') {
             ctx.moveTo(x + R_BIG, y);
             ctx.arc(x, y, R_BIG, 0, Math.PI * 2);
         }
-        // 内側の円を描画 (small または double)
         if (config.type === 'small' || config.type === 'double') {
             ctx.moveTo(x + R_SMALL, y);
             ctx.arc(x, y, R_SMALL, 0, Math.PI * 2);
         }
         ctx.stroke();
 
-        // 中心の点
         ctx.beginPath();
         ctx.fillStyle = '#333';
         ctx.arc(x, y, 2 * SCALE, 0, Math.PI * 2);
         ctx.fill();
 
-        // 分割線の描画
         if (config.lines > 0) {
-            // big, double, または type指定なしの場合(nなど)は R_BIG まで引く
             const lineLen = (config.type === 'big' || config.type === 'double') ? R_BIG : R_SMALL;
             ctx.beginPath();
             for (let i = 0; i < config.lines; i++) {
@@ -95,90 +91,103 @@
     }
 
     function render() {
-        // 入力文字のフィルタリング
-        const text = input.value.toLowerCase().replace(/[^iuotkspdgzbln,\.]/g, '');
+        const fullText = input.value.toLowerCase();
+        // 改行を保持しつつ、不正な文字を除去
+        const lines = fullText.split('\n');
+        
+        // 最大横幅と高さを計算
+        let maxChars = 0;
+        lines.forEach(l => {
+            const filtered = l.replace(/[^iuotkspdgzbln,\.]/g, '');
+            if(filtered.length > maxChars) maxChars = filtered.length;
+        });
+
+        canvas.width = Math.max(1000, maxChars * 80 + 100);
+        canvas.height = Math.max(400, lines.length * LINE_HEIGHT + 100);
+        
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        let curX = 60;
-        let curY = 150;
-        
-        canvas.width = Math.max(1000, text.length * 75 + 100);
-        canvas.height = 400;
 
-        for (let i = 0; i < text.length; i++) {
-            let char = text[i];
-            
-            if (CHAR_MAP[char]) {
-                drawSymbol(curX, curY, char);
-                const currentR = CHAR_MAP[char].r;
+        lines.forEach((lineText, lineIndex) => {
+            const text = lineText.replace(/[^iuotkspdgzbln,\.]/g, '');
+            let curX = 60;
+            let baseRowY = 100 * SCALE + (lineIndex * LINE_HEIGHT);
+            let curY = baseRowY;
+
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
                 
-                let next = text[i+1];
-                if (!next) break;
+                if (CHAR_MAP[char]) {
+                    drawSymbol(curX, curY, char);
+                    const currentR = CHAR_MAP[char].r;
+                    
+                    let next = text[i+1];
+                    if (!next) break;
 
-                if ("iuo".includes(next)) {
-                    let angle = 0;
-                    if (next === 'i') angle = -Math.PI / 6;
-                    if (next === 'u') angle = Math.PI / 6;
+                    if ("iuo".includes(next)) {
+                        let angle = 0;
+                        if (next === 'i') angle = -Math.PI / 6;
+                        if (next === 'u') angle = Math.PI / 6;
 
-                    let afterVowel = text[i+2];
-                    if (afterVowel) {
-                        if (CHAR_MAP[afterVowel]) {
-                            let dist = currentR + CHAR_MAP[afterVowel].r;
-                            curX += Math.cos(angle) * dist;
-                            curY += Math.sin(angle) * dist;
-                            i++; 
-                        } else if (afterVowel === ',') {
-                            let dist = currentR + R_DOT;
-                            curX += Math.cos(angle) * dist;
-                            curY += Math.sin(angle) * dist;
-                            ctx.beginPath();
-                            ctx.arc(curX, curY, R_DOT, 0, Math.PI * 2);
-                            ctx.stroke();
-                            curX += 45 * SCALE;
-                            curY = 150;
-                            i += 2;
+                        let afterVowel = text[i+2];
+                        if (afterVowel) {
+                            if (CHAR_MAP[afterVowel]) {
+                                let dist = currentR + CHAR_MAP[afterVowel].r;
+                                curX += Math.cos(angle) * dist;
+                                curY += Math.sin(angle) * dist;
+                                i++; 
+                            } else if (afterVowel === ',') {
+                                let dist = currentR + R_DOT;
+                                curX += Math.cos(angle) * dist;
+                                curY += Math.sin(angle) * dist;
+                                ctx.beginPath();
+                                ctx.arc(curX, curY, R_DOT, 0, Math.PI * 2);
+                                ctx.stroke();
+                                curX += 45 * SCALE;
+                                curY = baseRowY; // 行の高さに戻す
+                                i += 2;
+                            } else {
+                                curX += 45 * SCALE;
+                                curY = baseRowY;
+                                i++;
+                            }
                         } else {
-                            curX += 45 * SCALE;
-                            curY = 150;
-                            i++;
+                            break; 
                         }
-                    } else {
-                        break; 
+                    } else if (CHAR_MAP[next]) {
+                        let targetX = curX + BASE_LINE_DIST;
+                        let targetY = curY;
+                        ctx.beginPath();
+                        ctx.moveTo(curX, curY);
+                        ctx.lineTo(targetX, targetY);
+                        ctx.stroke();
+                        curX = targetX;
+                        curY = targetY;
+                    } else if (next === ',') {
+                        let targetX = curX + 25 * SCALE;
+                        ctx.beginPath();
+                        ctx.moveTo(curX, curY);
+                        ctx.lineTo(targetX, curY);
+                        ctx.stroke();
+                        curX = targetX;
                     }
-                } else if (CHAR_MAP[next]) {
-                    let targetX = curX + BASE_LINE_DIST;
-                    let targetY = curY;
+                } else if (char === ',') {
                     ctx.beginPath();
-                    ctx.moveTo(curX, curY);
-                    ctx.lineTo(targetX, targetY);
+                    ctx.arc(curX, curY, R_DOT, 0, Math.PI * 2);
                     ctx.stroke();
-                    curX = targetX;
-                    curY = targetY;
-                } else if (next === ',') {
-                    let targetX = curX + 25 * SCALE;
+                    curX += 45 * SCALE;
+                    curY = baseRowY;
+                } else if (char === '.') {
+                    const h = R_SMALL;
                     ctx.beginPath();
-                    ctx.moveTo(curX, curY);
-                    ctx.lineTo(targetX, curY);
+                    ctx.lineWidth = 2.5;
+                    ctx.moveTo(curX + 5, curY - h); ctx.lineTo(curX + 5, curY + h);
+                    ctx.moveTo(curX + 15, curY - h); ctx.lineTo(curX + 15, curY + h);
                     ctx.stroke();
-                    curX = targetX;
+                    curX += 50 * SCALE;
+                    curY = baseRowY;
                 }
-            } else if (char === ',') {
-                ctx.beginPath();
-                ctx.arc(curX, curY, R_DOT, 0, Math.PI * 2);
-                ctx.stroke();
-                curX += 45 * SCALE;
-                curY = 150;
-            } else if (char === '.') {
-                const h = R_SMALL;
-                ctx.beginPath();
-                ctx.lineWidth = 2.5;
-                ctx.moveTo(curX + 5, curY - h); ctx.lineTo(curX + 5, curY + h);
-                ctx.moveTo(curX + 15, curY - h); ctx.lineTo(curX + 15, curY + h);
-                ctx.stroke();
-                curX += 50 * SCALE;
-                curY = 150;
             }
-        }
+        });
     }
 
     input.addEventListener('input', render);
