@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>独自言語メモ帳</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 800px;
+        }
+        h1 { font-size: 1.5rem; color: #333; margin-bottom: 10px; }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            margin-bottom: 20px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        textarea:focus { border-color: #007bff; }
+        #canvas-container {
+            width: 100%;
+            overflow-x: auto;
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        canvas { background-color: white; }
+        .controls { margin-top: 10px; font-size: 0.8rem; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>記号言語メモ帳</h1>
+    <textarea id="input" placeholder="i, u, o, t, k, s, p, d, g, z, b, l, n, カンマ, ピリオドを入力..."></textarea>
+    
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <p>※ 使用可能文字: i, u, o, t, k, s, p, d, g, z, b, l, n, , (カンマ), . (ピリオド)</p>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const input = document.getElementById('input');
+
+    const R_BIG = 18;
+    const R_SMALL = 10;
+    const R_DOT = 3;
+    const LINE_LEN = 40; // 文字間の基本距離
+
+    // 文字の定義
+    const CHAR_MAP = {
+        'z': { type: 'big', lines: 0 },
+        's': { type: 'small', lines: 0 },
+        'd': { type: 'big', lines: 3 },
+        't': { type: 'small', lines: 3 },
+        'g': { type: 'big', lines: 4 },
+        'k': { type: 'small', lines: 4 },
+        'b': { type: 'big', lines: 6 },
+        'p': { type: 'small', lines: 6 },
+        'l': { type: 'double', lines: 0 },
+        'n': { type: 'double', lines: 3 },
+    };
+
+    function drawSymbol(x, y, charCode) {
+        const config = CHAR_MAP[charCode];
+        if (!config) return;
+
+        ctx.beginPath();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#333';
+
+        // 円の描画
+        if (config.type === 'big' || config.type === 'double') {
+            ctx.moveTo(x + R_BIG, y);
+            ctx.arc(x, y, R_BIG, 0, Math.PI * 2);
+        }
+        if (config.type === 'small' || config.type === 'double') {
+            ctx.moveTo(x + R_SMALL, y);
+            ctx.arc(x, y, R_SMALL, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+
+        // 中身の点
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 分割線の描画
+        if (config.lines > 0) {
+            ctx.beginPath();
+            for (let i = 0; i < config.lines; i++) {
+                const angle = (Math.PI * 2 / config.lines) * i - Math.PI / 2;
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + Math.cos(angle) * R_SMALL, y + Math.sin(angle) * R_SMALL);
+            }
+            ctx.stroke();
+        }
+    }
+
+    function drawPunctuation(x, y, type) {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#333';
+        if (type === 'comma') {
+            ctx.beginPath();
+            ctx.arc(x, y, R_DOT, 0, Math.PI * 2);
+            ctx.stroke();
+        } else if (type === 'period') {
+            const h = R_SMALL;
+            ctx.beginPath();
+            ctx.moveTo(x - 3, y - h); ctx.lineTo(x - 3, y + h);
+            ctx.moveTo(x + 3, y - h); ctx.lineTo(x + 3, y + h);
+            ctx.stroke();
+        }
+    }
+
+    function render() {
+        const text = input.value.toLowerCase().replace(/[^iuotkspdgzbl,\.]/g, '');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        let curX = 50;
+        let curY = 100;
+        
+        canvas.width = Math.max(800, text.length * 50 + 100);
+        canvas.height = 300;
+
+        for (let i = 0; i < text.length; i++) {
+            let char = text[i];
+            
+            // 子音の場合
+            if (CHAR_MAP[char]) {
+                drawSymbol(curX, curY, char);
+                
+                // 次の要素を確認して接続
+                let next = text[i+1];
+                let angle = 0; // デフォルト (o または 子音連続)
+
+                if (next === 'i') angle = -Math.PI / 6; // 右上30度
+                if (next === 'u') angle = Math.PI / 6;  // 右下30度
+
+                // 母音の次がさらに何か（カンマや子音）あるかチェック
+                let targetX = curX + Math.cos(angle) * LINE_LEN;
+                let targetY = curY + Math.sin(angle) * LINE_LEN;
+
+                // 接続線の描画
+                ctx.beginPath();
+                ctx.moveTo(curX, curY);
+                ctx.lineTo(targetX, targetY);
+                ctx.stroke();
+
+                curX = targetX;
+                curY = targetY;
+
+                // 母音を消費
+                if (next === 'i' || next === 'u' || next === 'o') {
+                    i++;
+                }
+            } 
+            // 記号の場合
+            else if (char === ',') {
+                drawPunctuation(curX, curY, 'comma');
+                // 次がピリオドなら少し横に動かす
+                if (text[i+1] === '.') {
+                    curX += 20;
+                } else {
+                    curX += LINE_LEN;
+                }
+            } else if (char === '.') {
+                drawPunctuation(curX, curY, 'period');
+                curX += LINE_LEN;
+            }
+        }
+    }
+
+    input.addEventListener('input', render);
+    render();
+</script>
+
+</body>
+</html>
