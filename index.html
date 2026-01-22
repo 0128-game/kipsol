@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>独自言語メモ帳 v5</title>
+    <title>独自言語メモ帳 v6</title>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 95%; max-width: 1000px; }
@@ -16,18 +16,18 @@
 <body>
 
 <div class="container">
-    <h2>記号言語メモ帳 (分割線サイズ・角度調整版)</h2>
-    <textarea id="input" placeholder="入力例: koko, sisu, tate."></textarea>
+    <h2>記号言語メモ帳 (n の修正完了)</h2>
+    <textarea id="input" placeholder="入力例: nani, lulo, kana."></textarea>
     
     <div id="canvas-container">
         <canvas id="canvas"></canvas>
     </div>
 
     <div class="info">
-        <strong>【現在の描画仕様】</strong><br>
-        ・<strong>分割線</strong>：有声音（大円）は外円まで、無声音（小円）は内円までの長さに調整。<br>
-        ・<strong>角度修正</strong>：k, g は 45° 回転、t, d は 30° 回転して描画。<br>
-        ・<strong>接続</strong>：母音の後は、次の文字が入力されるまで線を描画せず待機します。
+        <strong>【現在の文字仕様】</strong><br>
+        ・<strong>n</strong>：二重円 ＋ 3等分線（30度傾斜）<br>
+        ・<strong>l</strong>：二重円のみ<br>
+        ・<strong>サイズ</strong>：1.5倍（有声音・n の線は外円まで到達）
     </div>
 </div>
 
@@ -45,10 +45,10 @@
     const CHAR_MAP = {
         'z': { r: R_BIG,   lines: 0, type: 'big'   , offset: 0 },
         's': { r: R_SMALL, lines: 0, type: 'small' , offset: 0 },
-        'd': { r: R_BIG,   lines: 3, type: 'big'   , offset: Math.PI / 6 }, // 30度
-        't': { r: R_SMALL, lines: 3, type: 'small' , offset: Math.PI / 6 }, // 30度
-        'g': { r: R_BIG,   lines: 4, type: 'big'   , offset: Math.PI / 4 }, // 45度
-        'k': { r: R_SMALL, lines: 4, type: 'small' , offset: Math.PI / 4 }, // 45度
+        'd': { r: R_BIG,   lines: 3, type: 'big'   , offset: Math.PI / 6 },
+        't': { r: R_SMALL, lines: 3, type: 'small' , offset: Math.PI / 6 },
+        'g': { r: R_BIG,   lines: 4, type: 'big'   , offset: Math.PI / 4 },
+        'k': { r: R_SMALL, lines: 4, type: 'small' , offset: Math.PI / 4 },
         'b': { r: R_BIG,   lines: 6, type: 'big'   , offset: 0 },
         'p': { r: R_SMALL, lines: 6, type: 'small' , offset: 0 },
         'l': { r: R_BIG,   lines: 0, type: 'double', offset: 0 },
@@ -62,22 +62,27 @@
         ctx.lineWidth = 2.5;
         ctx.strokeStyle = '#333';
         
+        // 外側の円を描画 (big または double)
         if (config.type === 'big' || config.type === 'double') {
             ctx.moveTo(x + R_BIG, y);
             ctx.arc(x, y, R_BIG, 0, Math.PI * 2);
         }
+        // 内側の円を描画 (small または double)
         if (config.type === 'small' || config.type === 'double') {
             ctx.moveTo(x + R_SMALL, y);
             ctx.arc(x, y, R_SMALL, 0, Math.PI * 2);
         }
         ctx.stroke();
 
+        // 中心の点
         ctx.beginPath();
+        ctx.fillStyle = '#333';
         ctx.arc(x, y, 2 * SCALE, 0, Math.PI * 2);
         ctx.fill();
 
-        // 分割線の描画（有声音ならR_BIGまで、無声音ならR_SMALLまで）
+        // 分割線の描画
         if (config.lines > 0) {
+            // big, double, または type指定なしの場合(nなど)は R_BIG まで引く
             const lineLen = (config.type === 'big' || config.type === 'double') ? R_BIG : R_SMALL;
             ctx.beginPath();
             for (let i = 0; i < config.lines; i++) {
@@ -90,13 +95,14 @@
     }
 
     function render() {
-        const text = input.value.toLowerCase().replace(/[^iuotkspdgzbl,\.]/g, '');
+        // 入力文字のフィルタリング
+        const text = input.value.toLowerCase().replace(/[^iuotkspdgzbln,\.]/g, '');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         let curX = 60;
         let curY = 150;
         
-        canvas.width = Math.max(1000, text.length * 70 + 100);
+        canvas.width = Math.max(1000, text.length * 75 + 100);
         canvas.height = 400;
 
         for (let i = 0; i < text.length; i++) {
@@ -132,7 +138,6 @@
                             curY = 150;
                             i += 2;
                         } else {
-                            // ピリオドなどが来た場合
                             curX += 45 * SCALE;
                             curY = 150;
                             i++;
@@ -166,6 +171,7 @@
             } else if (char === '.') {
                 const h = R_SMALL;
                 ctx.beginPath();
+                ctx.lineWidth = 2.5;
                 ctx.moveTo(curX + 5, curY - h); ctx.lineTo(curX + 5, curY + h);
                 ctx.moveTo(curX + 15, curY - h); ctx.lineTo(curX + 15, curY + h);
                 ctx.stroke();
