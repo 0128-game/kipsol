@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>独自言語メモ帳 v4</title>
+    <title>独自言語メモ帳 v5</title>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 95%; max-width: 1000px; }
@@ -16,7 +16,7 @@
 <body>
 
 <div class="container">
-    <h2>記号言語メモ帳 (1.5倍サイズ & 接続処理最適化)</h2>
+    <h2>記号言語メモ帳 (分割線サイズ・角度調整版)</h2>
     <textarea id="input" placeholder="入力例: koko, sisu, tate."></textarea>
     
     <div id="canvas-container">
@@ -24,10 +24,10 @@
     </div>
 
     <div class="info">
-        <strong>【更新仕様】</strong><br>
-        ・<strong>サイズ拡大</strong>：各記号を1.5倍の大きさで描画します。<br>
-        ・<strong>動的接続</strong>：母音（i, u, o）の後は、次に子音や記号が来るまで線を描画しません。<br>
-        ・<strong>接続ルール</strong>：母音を挟む場合は「直接接触」、子音が連続する場合は「直線」で描画します。
+        <strong>【現在の描画仕様】</strong><br>
+        ・<strong>分割線</strong>：有声音（大円）は外円まで、無声音（小円）は内円までの長さに調整。<br>
+        ・<strong>角度修正</strong>：k, g は 45° 回転、t, d は 30° 回転して描画。<br>
+        ・<strong>接続</strong>：母音の後は、次の文字が入力されるまで線を描画せず待機します。
     </div>
 </div>
 
@@ -36,7 +36,6 @@
     const ctx = canvas.getContext('2d');
     const input = document.getElementById('input');
 
-    // 1.5倍に拡大したサイズ設定
     const SCALE = 1.5;
     const R_BIG = 18 * SCALE;
     const R_SMALL = 10 * SCALE;
@@ -44,23 +43,23 @@
     const BASE_LINE_DIST = 45 * SCALE;
 
     const CHAR_MAP = {
-        'z': { r: R_BIG, lines: 0, type: 'big' },
-        's': { r: R_SMALL, lines: 0, type: 'small' },
-        'd': { r: R_BIG, lines: 3, type: 'big' },
-        't': { r: R_SMALL, lines: 3, type: 'small' },
-        'g': { r: R_BIG, lines: 4, type: 'big' },
-        'k': { r: R_SMALL, lines: 4, type: 'small' },
-        'b': { r: R_BIG, lines: 6, type: 'big' },
-        'p': { r: R_SMALL, lines: 6, type: 'small' },
-        'l': { r: R_BIG, lines: 0, type: 'double' },
-        'n': { r: R_BIG, lines: 3, type: 'double' },
+        'z': { r: R_BIG,   lines: 0, type: 'big'   , offset: 0 },
+        's': { r: R_SMALL, lines: 0, type: 'small' , offset: 0 },
+        'd': { r: R_BIG,   lines: 3, type: 'big'   , offset: Math.PI / 6 }, // 30度
+        't': { r: R_SMALL, lines: 3, type: 'small' , offset: Math.PI / 6 }, // 30度
+        'g': { r: R_BIG,   lines: 4, type: 'big'   , offset: Math.PI / 4 }, // 45度
+        'k': { r: R_SMALL, lines: 4, type: 'small' , offset: Math.PI / 4 }, // 45度
+        'b': { r: R_BIG,   lines: 6, type: 'big'   , offset: 0 },
+        'p': { r: R_SMALL, lines: 6, type: 'small' , offset: 0 },
+        'l': { r: R_BIG,   lines: 0, type: 'double', offset: 0 },
+        'n': { r: R_BIG,   lines: 3, type: 'double', offset: Math.PI / 6 },
     };
 
     function drawSymbol(x, y, charCode) {
         const config = CHAR_MAP[charCode];
         if (!config) return;
         ctx.beginPath();
-        ctx.lineWidth = 2.5; // 太さも少し調整
+        ctx.lineWidth = 2.5;
         ctx.strokeStyle = '#333';
         
         if (config.type === 'big' || config.type === 'double') {
@@ -73,18 +72,18 @@
         }
         ctx.stroke();
 
-        // 中心の点
         ctx.beginPath();
         ctx.arc(x, y, 2 * SCALE, 0, Math.PI * 2);
         ctx.fill();
 
-        // 分割線
+        // 分割線の描画（有声音ならR_BIGまで、無声音ならR_SMALLまで）
         if (config.lines > 0) {
+            const lineLen = (config.type === 'big' || config.type === 'double') ? R_BIG : R_SMALL;
             ctx.beginPath();
             for (let i = 0; i < config.lines; i++) {
-                const angle = (Math.PI * 2 / config.lines) * i - Math.PI / 2;
+                const angle = (Math.PI * 2 / config.lines) * i - Math.PI / 2 + config.offset;
                 ctx.moveTo(x, y);
-                ctx.lineTo(x + Math.cos(angle) * R_SMALL, y + Math.sin(angle) * R_SMALL);
+                ctx.lineTo(x + Math.cos(angle) * lineLen, y + Math.sin(angle) * lineLen);
             }
             ctx.stroke();
         }
@@ -97,7 +96,7 @@
         let curX = 60;
         let curY = 150;
         
-        canvas.width = Math.max(900, text.length * 70 + 100);
+        canvas.width = Math.max(1000, text.length * 70 + 100);
         canvas.height = 400;
 
         for (let i = 0; i < text.length; i++) {
@@ -110,7 +109,6 @@
                 let next = text[i+1];
                 if (!next) break;
 
-                // 母音判定
                 if ("iuo".includes(next)) {
                     let angle = 0;
                     if (next === 'i') angle = -Math.PI / 6;
@@ -119,36 +117,30 @@
                     let afterVowel = text[i+2];
                     if (afterVowel) {
                         if (CHAR_MAP[afterVowel]) {
-                            // 子音+母音+子音: 直接くっつく
                             let dist = currentR + CHAR_MAP[afterVowel].r;
                             curX += Math.cos(angle) * dist;
                             curY += Math.sin(angle) * dist;
-                            i++; // 母音をスキップ
+                            i++; 
                         } else if (afterVowel === ',') {
-                            // 子音+母音+語末記号: 直接くっつく
                             let dist = currentR + R_DOT;
                             curX += Math.cos(angle) * dist;
                             curY += Math.sin(angle) * dist;
-                            
                             ctx.beginPath();
                             ctx.arc(curX, curY, R_DOT, 0, Math.PI * 2);
                             ctx.stroke();
-                            
-                            curX += 40 * SCALE; // 次の語へ
-                            curY = 150; // 高さリセット
-                            i += 2; // 母音とカンマをスキップ
-                        } else if (afterVowel === '.') {
-                            // 子音+母音+文末（語末記号なしのピリオドはルール外想定だが一応処理）
-                            curX += 40 * SCALE;
+                            curX += 45 * SCALE;
+                            curY = 150;
+                            i += 2;
+                        } else {
+                            // ピリオドなどが来た場合
+                            curX += 45 * SCALE;
                             curY = 150;
                             i++;
                         }
                     } else {
-                        // 次の文字がない場合、描画を保留（ループを抜ける）
-                        break;
+                        break; 
                     }
                 } else if (CHAR_MAP[next]) {
-                    // 子音+子音: 直線でつなぐ
                     let targetX = curX + BASE_LINE_DIST;
                     let targetY = curY;
                     ctx.beginPath();
@@ -158,7 +150,6 @@
                     curX = targetX;
                     curY = targetY;
                 } else if (next === ',') {
-                    // 子音+語末（母音なし）: 直線
                     let targetX = curX + 25 * SCALE;
                     ctx.beginPath();
                     ctx.moveTo(curX, curY);
@@ -170,7 +161,7 @@
                 ctx.beginPath();
                 ctx.arc(curX, curY, R_DOT, 0, Math.PI * 2);
                 ctx.stroke();
-                curX += 40 * SCALE;
+                curX += 45 * SCALE;
                 curY = 150;
             } else if (char === '.') {
                 const h = R_SMALL;
