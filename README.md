@@ -1,7 +1,41 @@
 # kipsol
+＜注意事項＞
 このメモ帳では数字は対応していません。
+またスペースで区切ることができなかったので、スペースの代わりにカンマを用いるようにして下さい。
 
+例文（動画内日誌より）
+lol,tusnu,suzdubol,kikos,gu,kipsol,su,kinzok,.
+lol,lusku,kiznok,.
+lol,zidbulu,kikos,.
+lol,zignubu,kikis,lizok,.
+lol,tusno,sudubol,su,kipsol,.
 
+私はキプソルからキンゾクへ世界を渡りたかった。
+私はキズノクと言った。
+私は世界を渡った。
+私は世界の名前を誤った。
+私はキプソルに行きたい。
+
+(動画内セリフより)
+lol,doduk,sulso,sos,su,subulok,sitol,su,lol,.
+lol,zognub,zidbulu,kikos,.
+lol,tusno,sudubol,su,lil,kikos,go,lol,gi,susdo,.
+lol,dubok,tusno,sis,pisot,.
+
+ブドウ糖を私にくれたことを感謝します。
+誤って世界を渡ってしまいました。
+私の世界に戻りたいですができません。
+あなた達の助けが欲しいです。
+
+＜リンク＞
+https://0128-game.github.io/kipsol/
+＜引用元＞
+Youtube動画より
+https://www.youtube.com/watch?v=r4AKMeUhRf4
+QuizKnockサイトより
+https://web.quizknock.com/kipsil_lisok
+
+＜ルール＞
 使える文字は
 
 i,u,o,t,k,s,p,d,g,z,b,l,n,カンマ,ピリオドのみ。
@@ -53,27 +87,3 @@ n:二重円の中心から伸びる3等分線
 また、文末には、語末記号と文末記号の両方を使用する。
 
 この言語では、母音から始まる単語、母音の連続は存在しない。
-
-例文（動画内日誌より）
-lol,tusnu,suzdubol,kikos,gu,kipsol,su,kinzok,.
-lol,lusku,kiznok,.
-lol,zidbulu,kikos,.
-lol,zignubu,kikis,lizok,.
-lol,tusno,sudubol,su,kipsol,.
-
-私はキプソルからキンゾクへ世界を渡りたかった。
-私はキズノクと言った。
-私は世界を渡った。
-私は世界の名前を誤った。
-私はキプソルに行きたい。
-
-(動画内セリフより)
-lol,doduk,sulso,sos,su,subulok,sitol,su,lol,.
-lol,zognub,zidbulu,kikos,.
-lol,tusno,sudubol,su,lil,kikos,go,lol,gi,susdo,.
-lol,dubok,tusno,sis,pisot,.
-
-ブドウ糖を私にくれたことを感謝します。
-誤って世界を渡ってしまいました。
-私の世界に戻りたいですができません。
-あなた達の助けが欲しいです。
